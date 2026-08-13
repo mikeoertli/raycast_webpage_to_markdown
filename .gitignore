@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node dependencies and build output
+**/node_modules/
+**/dist/
+**/build/
+
+# Raycast development artifacts
+**/raycast-env.d.ts
+**/.raycast-swift-build/
+**/.swiftpm/
+**/compiled_raycast_swift/
+**/compiled_raycast_rust/
+
+# Secrets and machine-specific configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
