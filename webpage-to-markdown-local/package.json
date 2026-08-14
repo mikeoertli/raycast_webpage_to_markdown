@@ -18,14 +18,14 @@
       "name": "webpage-to-markdown-local",
       "title": "Webpage to Markdown",
       "subtitle": "Convert a webpage to Markdown locally",
-      "description": "Downloads a webpage directly and converts it to Markdown on your computer, without a cloud conversion service.",
+      "description": "Downloads a webpage directly and converts it to Markdown on your computer, without a cloud conversion service. References to image assets use URLs to the online sources.",
       "mode": "view"
     },
     {
       "name": "webpage-to-offline-markdown",
       "title": "Webpage to Offline Markdown",
       "subtitle": "Save Markdown and article images locally",
-      "description": "Converts a webpage to Markdown, downloads its article images into an assets folder, and saves everything locally.",
+      "description": "Converts a webpage to Markdown where image references point to image assets which have been downloaded into an assets folder. Everything is saved locally.",
       "mode": "view"
     }
   ],
@@ -56,7 +56,8 @@
       "type": "textfield",
       "required": false,
       "title": "Text Editor Command",
-      "description": "Command used to open Markdown in an editor, including any arguments. Configure this before using the editor actions."
+      "description": "Command used to open Markdown in an editor, including any arguments. Configure this before using the editor actions.",
+      "placeholder": "/opt/homebrew/bin/codium"
     },
     {
       "name": "markdownViewer",

@@ -15,7 +15,7 @@ import {
 import { Readability } from "@mozilla/readability";
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
-import { basename, dirname, extname, join } from "node:path";
+import { basename, extname, join } from "node:path";
 import { spawn } from "node:child_process";
 import { parseHTML } from "linkedom";
 import { useState } from "react";
@@ -28,6 +28,8 @@ const REQUEST_TIMEOUT_MS = 20_000;
 type FormValues = {
   url: string;
   outputFileName?: string;
+  outputDirectory?: string[];
+  outputTitleFormat: "default" | FileNameStyle;
 };
 
 type Preferences = {
@@ -51,6 +53,8 @@ type ExtractedPage = {
 type Conversion = Omit<ExtractedPage, "contentHtml"> & {
   markdown: string;
   outputFileName?: string;
+  outputDirectory?: string;
+  fileNameStyle?: FileNameStyle;
   savedPath?: string;
   offline?: boolean;
 };
@@ -87,22 +91,33 @@ export function WebpageToMarkdownCommand({ offline = false }: { offline?: boolea
 
     try {
       const extractedPage = await extractWebpage(sourceUrl);
+      const fileNameStyle = selectedFileNameStyle(values.outputTitleFormat, preferences);
       let result: Conversion;
 
       if (offline) {
-        const outputPath = await getAvailableOutputPath(extractedPage.title, values.outputFileName, preferences);
+        const output = await getAvailableOfflineOutput(
+          extractedPage.title,
+          values.outputFileName,
+          preferences,
+          values.outputDirectory?.[0],
+          fileNameStyle,
+        );
         result = await createConversion(extractedPage, values.outputFileName, {
-          directory: join(dirname(outputPath), "assets"),
-          filePrefix: basename(outputPath, extname(outputPath)),
+          directory: output.assetsDirectory,
+          filePrefix: basename(output.markdownPath, extname(output.markdownPath)),
         });
-        await writeFile(outputPath, formatDocument(result), "utf8");
-        result.savedPath = outputPath;
+        await writeFile(output.markdownPath, formatDocument(result), "utf8");
+        result.savedPath = output.markdownPath;
+        result.outputDirectory = values.outputDirectory?.[0];
+        result.fileNameStyle = fileNameStyle;
         result.offline = true;
         toast.style = Toast.Style.Success;
         toast.title = "Offline Markdown saved";
-        toast.message = basename(outputPath);
+        toast.message = basename(output.directory);
       } else {
         result = await createConversion(extractedPage, values.outputFileName);
+        result.outputDirectory = values.outputDirectory?.[0];
+        result.fileNameStyle = fileNameStyle;
         toast.style = Toast.Style.Success;
         toast.title = "Markdown ready";
         toast.message = "Nothing was sent to a conversion service.";
@@ -162,6 +177,30 @@ export function WebpageToMarkdownCommand({ offline = false }: { offline?: boolea
         placeholder="Optional - generated from the page title"
         info="Optional. You can include .md, but it is not required and will not be duplicated."
       />
+      <Form.Dropdown
+        id="outputTitleFormat"
+        title="Output Title Format"
+        defaultValue="default"
+        info="Used to generate the output file name when Output File Name is left blank."
+      >
+        <Form.Dropdown.Item value="default" title="Use Default Preference" />
+        <Form.Dropdown.Item value="kebab-case" title="lowercase-with-dashes" />
+        <Form.Dropdown.Item value="snake_case" title="lowercase_with_underscores" />
+        <Form.Dropdown.Item value="title-case" title="Title Case" />
+        <Form.Dropdown.Item value="dated-kebab-case" title="date-lowercase-with-dashes" />
+      </Form.Dropdown>
+      <Form.FilePicker
+        id="outputDirectory"
+        title="Save To"
+        allowMultipleSelection={false}
+        canChooseDirectories
+        canChooseFiles={false}
+        info={
+          offline
+            ? "Optional. The selected folder will contain a new folder named after the Markdown file; that folder contains the .md file and assets folder."
+            : "Optional. Used when you save the Markdown from the result screen. Leave blank to use the default output folder."
+        }
+      />
     </Form>
   );
 }
@@ -183,7 +222,13 @@ function MarkdownDetail({
       return savedPath;
     }
 
-    const outputPath = await getAvailableOutputPath(conversion.title, conversion.outputFileName, preferences);
+    const outputPath = await getAvailableOutputPath(
+      conversion.title,
+      conversion.outputFileName,
+      preferences,
+      conversion.outputDirectory,
+      conversion.fileNameStyle,
+    );
     await writeFile(outputPath, markdown, "utf8");
     setSavedPath(outputPath);
     await showToast({ style: Toast.Style.Success, title: "Markdown saved", message: basename(outputPath) });
@@ -479,18 +524,52 @@ function formatDocument(conversion: Conversion): string {
     .join("\n");
 }
 
-async function getAvailableOutputPath(title: string, requestedFileName: string | undefined, preferences: Preferences) {
-  const directory = outputDirectory(preferences.outputDirectory);
+async function getAvailableOutputPath(
+  title: string,
+  requestedFileName: string | undefined,
+  preferences: Preferences,
+  requestedDirectory?: string,
+  fileNameStyle?: FileNameStyle,
+) {
+  const directory = outputDirectory(requestedDirectory || preferences.outputDirectory);
   await mkdir(directory, { recursive: true });
 
   const stem = requestedFileName?.trim()
     ? customFileStem(requestedFileName)
-    : generatedFileStem(title, preferences.fileNameStyle ?? "kebab-case");
+    : generatedFileStem(title, fileNameStyle ?? preferences.fileNameStyle ?? "kebab-case");
 
   for (let suffix = 0; ; suffix += 1) {
     const outputPath = join(directory, `${stem}${suffix ? `-${suffix + 1}` : ""}.md`);
     if (!(await pathExists(outputPath))) {
       return outputPath;
+    }
+  }
+}
+
+async function getAvailableOfflineOutput(
+  title: string,
+  requestedFileName: string | undefined,
+  preferences: Preferences,
+  requestedDirectory?: string,
+  fileNameStyle?: FileNameStyle,
+): Promise<{ directory: string; markdownPath: string; assetsDirectory: string }> {
+  const parentDirectory = outputDirectory(requestedDirectory || preferences.outputDirectory);
+  await mkdir(parentDirectory, { recursive: true });
+
+  const stem = requestedFileName?.trim()
+    ? customFileStem(requestedFileName)
+    : generatedFileStem(title, fileNameStyle ?? preferences.fileNameStyle ?? "kebab-case");
+
+  for (let suffix = 0; ; suffix += 1) {
+    const folderName = `${stem}${suffix ? `-${suffix + 1}` : ""}`;
+    const directory = join(parentDirectory, folderName);
+    if (!(await pathExists(directory))) {
+      await mkdir(directory);
+      return {
+        directory,
+        markdownPath: join(directory, `${folderName}.md`),
+        assetsDirectory: join(directory, "assets"),
+      };
     }
   }
 }
@@ -502,6 +581,10 @@ function outputDirectory(configuredDirectory?: string): string {
   }
 
   return value === "~" ? homedir() : value.startsWith("~/") ? join(homedir(), value.slice(2)) : value;
+}
+
+function selectedFileNameStyle(value: FormValues["outputTitleFormat"], preferences: Preferences): FileNameStyle {
+  return value === "default" ? (preferences.fileNameStyle ?? "kebab-case") : value;
 }
 
 function customFileStem(fileName: string): string {

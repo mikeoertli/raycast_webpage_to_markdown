@@ -5,9 +5,9 @@ Convert a webpage to Markdown without sending its contents to a cloud conversion
 ## Commands
 
 1. Open **Webpage to Markdown** to preview local Markdown conversion. Its Command-K menu can copy Markdown, save it, or open it in a configured editor or Markdown viewer.
-2. Open **Webpage to Offline Markdown** to save Markdown immediately and download the article images into an `assets` folder next to it. Image paths in the Markdown use local relative links.
+2. Open **Webpage to Offline Markdown** to save Markdown immediately and download the article images into an `assets` folder. Each export gets its own folder, named after the Markdown file, containing the `.md` file and `assets` folder. Image paths in the Markdown use local relative links.
 
-Both commands let you optionally name the output file. The `.md` extension is optional and is never added twice.
+Both commands let you optionally name the output file and select a destination folder for that run. The `.md` extension is optional and is never added twice. Offline exports create their own folder inside the selected destination; the `.md` file is not placed in the selected destination directly.
 
 ## How it works
 
@@ -20,7 +20,7 @@ The extension downloads the webpage directly from your computer, extracts its re
 
 - **Default Output Folder**: where generated Markdown files are saved; defaults to Downloads.
 - **Generated File Name Style**: supports lowercase dashes, lowercase underscores, Title Case, and date-prefixed lowercase dashes.
-- **Text Editor Command**: a command to open the Markdown in an editor. Configure this before using the editor actions.
+- **Text Editor Command**: a command to open the Markdown in an editor. Configure this before using the editor actions; for example, `/opt/homebrew/bin/codium`.
 - **Markdown Viewer App**: an app that opens rendered Markdown. Configure this before using the Markdown viewer actions.
 
 The "without saving" editor and viewer actions create a temporary Markdown file, not a file in the output folder.
