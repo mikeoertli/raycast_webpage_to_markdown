@@ -3,7 +3,7 @@
   "name": "webpage-to-markdown-local",
   "title": "Webpage to Markdown (Local)",
   "description": "Convert a webpage to Markdown locally, without using a cloud conversion service.",
-  "icon": "extension-icon.png",
+  "icon": "webpage-to-markdown-logo.png",
   "author": "mikeoertli",
   "platforms": [
     "macOS",
