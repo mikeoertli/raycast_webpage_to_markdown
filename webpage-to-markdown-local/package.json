@@ -16,10 +16,54 @@
   "commands": [
     {
       "name": "webpage-to-markdown-local",
-      "title": "Webpage to Markdown (Local)",
+      "title": "Webpage to Markdown",
       "subtitle": "Convert a webpage to Markdown locally",
       "description": "Downloads a webpage directly and converts it to Markdown on your computer, without a cloud conversion service.",
       "mode": "view"
+    },
+    {
+      "name": "webpage-to-offline-markdown",
+      "title": "Webpage to Offline Markdown",
+      "subtitle": "Save Markdown and article images locally",
+      "description": "Converts a webpage to Markdown, downloads its article images into an assets folder, and saves everything locally.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "outputDirectory",
+      "type": "directory",
+      "required": false,
+      "title": "Default Output Folder",
+      "description": "Where generated Markdown files are saved. Leave blank to use Downloads."
+    },
+    {
+      "name": "fileNameStyle",
+      "type": "dropdown",
+      "required": false,
+      "title": "Generated File Name Style",
+      "description": "Used when no output file name is entered in the command.",
+      "default": "kebab-case",
+      "data": [
+        { "title": "lowercase-with-dashes", "value": "kebab-case" },
+        { "title": "lowercase_with_underscores", "value": "snake_case" },
+        { "title": "Title Case", "value": "title-case" },
+        { "title": "date-lowercase-with-dashes", "value": "dated-kebab-case" }
+      ]
+    },
+    {
+      "name": "editorCommand",
+      "type": "textfield",
+      "required": false,
+      "title": "Text Editor Command",
+      "description": "Command used to open Markdown in an editor, including any arguments. Configure this before using the editor actions."
+    },
+    {
+      "name": "markdownViewer",
+      "type": "appPicker",
+      "required": false,
+      "title": "Markdown Viewer App",
+      "description": "App used to open rendered Markdown. Configure this before using the Markdown viewer actions."
     }
   ],
   "dependencies": {
