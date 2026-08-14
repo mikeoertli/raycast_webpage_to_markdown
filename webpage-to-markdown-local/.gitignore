@@ -12,3 +12,33 @@ compiled_raycast_rust
 
 # misc
 .DS_Store
+
+# Secrets and machine-specific configuration
+.env
+.env.*
+!.env.example
+.envrc
+.npmrc
+.netrc
+.yarnrc
+.pypirc
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local development state
+.agents/
+.codex/
+.idea/
+.vscode/
+.cache/
+coverage/
+.nyc_output/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.swp
+*.swo
+*.orig

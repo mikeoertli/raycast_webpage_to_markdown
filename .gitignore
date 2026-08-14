@@ -16,10 +16,31 @@
 **/compiled_raycast_rust/
 
 # Secrets and machine-specific configuration
-.env
-.env.*
-!.env.example
-*.pem
-*.key
-*.p12
-*.pfx
+**/.env
+**/.env.*
+!**/.env.example
+**/.envrc
+**/.npmrc
+**/.netrc
+**/.yarnrc
+**/.pypirc
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+
+# Local agent, editor, test, and package-manager state
+**/.agents/
+**/.codex/
+**/.idea/
+**/.vscode/
+**/.cache/
+**/coverage/
+**/.nyc_output/
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+**/*.swp
+**/*.swo
+**/*.orig
