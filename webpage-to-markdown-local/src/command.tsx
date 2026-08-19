@@ -29,7 +29,7 @@ type FormValues = {
   url: string;
   outputFileName?: string;
   outputDirectory?: string[];
-  outputTitleFormat: "default" | FileNameStyle;
+  outputTitleFormat: FileNameOption;
 };
 
 type Preferences = {
@@ -40,6 +40,7 @@ type Preferences = {
 };
 
 type FileNameStyle = "kebab-case" | "snake_case" | "title-case" | "dated-kebab-case";
+type FileNameOption = "default" | "custom" | FileNameStyle;
 
 type ExtractedPage = {
   contentHtml: string;
@@ -67,6 +68,7 @@ type AssetOptions = {
 export function WebpageToMarkdownCommand({ offline = false }: { offline?: boolean }) {
   const [conversion, setConversion] = useState<Conversion>();
   const [isConverting, setIsConverting] = useState(false);
+  const [fileNameOption, setFileNameOption] = useState<FileNameOption>("default");
   const preferences = getPreferenceValues<Preferences>();
 
   async function handleSubmit(values: FormValues) {
@@ -171,24 +173,28 @@ export function WebpageToMarkdownCommand({ offline = false }: { offline?: boolea
         autoFocus
         info="The page must be reachable from this computer. Browser sign-in sessions are not shared."
       />
-      <Form.TextField
-        id="outputFileName"
-        title="Output File Name"
-        placeholder="Optional - generated from the page title"
-        info="Optional. You can include .md, but it is not required and will not be duplicated."
-      />
       <Form.Dropdown
         id="outputTitleFormat"
-        title="Output Title Format"
-        defaultValue="default"
-        info="Used to generate the output file name when Output File Name is left blank."
+        title="Output File Name"
+        value={fileNameOption}
+        onChange={(value) => setFileNameOption(value as FileNameOption)}
+        info="Choose a generated filename format or enter a custom file name."
       >
         <Form.Dropdown.Item value="default" title="Use Default Preference" />
         <Form.Dropdown.Item value="kebab-case" title="lowercase-with-dashes" />
         <Form.Dropdown.Item value="snake_case" title="lowercase_with_underscores" />
         <Form.Dropdown.Item value="title-case" title="Title Case" />
         <Form.Dropdown.Item value="dated-kebab-case" title="date-lowercase-with-dashes" />
+        <Form.Dropdown.Item value="custom" title="Custom File Name" />
       </Form.Dropdown>
+      {fileNameOption === "custom" && (
+        <Form.TextField
+          id="outputFileName"
+          title="Custom File Name"
+          placeholder="article-notes"
+          info="The .md extension is optional and will not be duplicated."
+        />
+      )}
       <Form.FilePicker
         id="outputDirectory"
         title="Save To"
@@ -235,6 +241,11 @@ function MarkdownDetail({
     return outputPath;
   }
 
+  async function saveAndShowMarkdown() {
+    const outputPath = await saveMarkdown();
+    await showInFinder(outputPath);
+  }
+
   async function openInEditor(saveFirst: boolean) {
     const editorCommand = preferences.editorCommand?.trim();
     if (!editorCommand) {
@@ -264,9 +275,9 @@ function MarkdownDetail({
         <ActionPanel>
           <Action.CopyToClipboard title="Copy Markdown" content={markdown} />
           <Action
-            title={savedPath ? "Show Saved Markdown" : "Save Markdown"}
+            title={savedPath ? "Show Markdown File" : "Save and Show Markdown File"}
             icon={Icon.Folder}
-            onAction={() => runAction(savedPath ? () => showInFinder(savedPath) : saveMarkdown)}
+            onAction={() => runAction(saveAndShowMarkdown)}
           />
           <Action
             title="Save and Open in Text Editor"
@@ -367,7 +378,7 @@ async function createConversion(
 async function localizeImages(document: Document, assetOptions: AssetOptions) {
   const downloadedImages = new Map<string, string>();
   let imageNumber = 1;
-  await mkdir(assetOptions.directory, { recursive: true });
+  let assetsDirectoryCreated = false;
 
   for (const image of document.querySelectorAll<HTMLElement>("img[src]")) {
     const source = image.getAttribute("src");
@@ -386,6 +397,10 @@ async function localizeImages(document: Document, assetOptions: AssetOptions) {
       if (!fileName) {
         const downloadedImage = await fetchImage(imageUrl);
         const extension = imageExtension(downloadedImage.contentType, imageUrl);
+        if (!assetsDirectoryCreated) {
+          await mkdir(assetOptions.directory, { recursive: true });
+          assetsDirectoryCreated = true;
+        }
         fileName = await writeUniqueImage(
           assetOptions.directory,
           `${assetOptions.filePrefix}-image-${String(imageNumber).padStart(3, "0")}.${extension}`,
@@ -397,10 +412,26 @@ async function localizeImages(document: Document, assetOptions: AssetOptions) {
 
       image.setAttribute("src", `assets/${fileName}`);
       image.removeAttribute("srcset");
+      removeLinkAroundLocalImage(image);
     } catch {
       // A missing image must not make the saved Markdown refer to an online resource.
       image.remove();
     }
+  }
+}
+
+function removeLinkAroundLocalImage(image: HTMLElement) {
+  let ancestor = image.parentElement;
+
+  while (ancestor) {
+    if (ancestor.tagName === "A") {
+      // Turndown renders linked images as [![](local-image)](original-url).
+      // Offline exports should not retain that online image link.
+      ancestor.removeAttribute("href");
+      return;
+    }
+
+    ancestor = ancestor.parentElement;
   }
 }
 
@@ -583,8 +614,8 @@ function outputDirectory(configuredDirectory?: string): string {
   return value === "~" ? homedir() : value.startsWith("~/") ? join(homedir(), value.slice(2)) : value;
 }
 
-function selectedFileNameStyle(value: FormValues["outputTitleFormat"], preferences: Preferences): FileNameStyle {
-  return value === "default" ? (preferences.fileNameStyle ?? "kebab-case") : value;
+function selectedFileNameStyle(value: FileNameOption, preferences: Preferences): FileNameStyle {
+  return value === "default" || value === "custom" ? (preferences.fileNameStyle ?? "kebab-case") : value;
 }
 
 function customFileStem(fileName: string): string {
