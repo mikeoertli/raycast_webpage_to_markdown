@@ -1,28 +1,73 @@
-# Webpage to Markdown (Local)
+# Extension configuration and development
 
-Convert a webpage to Markdown without sending its contents to a cloud conversion service.
+This directory is the Raycast extension package. For the project overview, commands, and offline export behavior, return to the [main README](../README.md).
 
-## Commands
+## Configure Raycast preferences
 
-1. Open **Webpage to Markdown** to preview local Markdown conversion. Its Command-K menu can copy Markdown, save it, or open it in a configured editor or Markdown viewer.
-2. Open **Webpage to Offline Markdown** to save Markdown immediately and download the article images into an `assets` folder. Each export gets its own folder, named after the Markdown file, containing the `.md` file and `assets` folder. Image paths in the Markdown use local relative links.
+Open the extension preferences in Raycast to configure output and application defaults.
 
-Both commands let you optionally name the output file and select a destination folder for that run. The `.md` extension is optional and is never added twice. Offline exports create their own folder inside the selected destination; the `.md` file is not placed in the selected destination directly.
+<p align="center">
+  <img width="800" alt="Webpage to Markdown extension preferences in Raycast" src="assets/extension_settings_screenshot.png" />
+</p>
 
-## How it works
+| Preference | Purpose |
+| --- | --- |
+| **Default Output Folder** | Used when a command does not choose a destination. Defaults to Downloads. |
+| **Generated File Name Style** | Used when Output File Name is set to **Use Default Preference**. Supports lowercase dashes, lowercase underscores, Title Case, and date-prefixed lowercase dashes. |
+| **Text Editor Command** | The command to open Markdown in an editor, for example `/opt/homebrew/bin/codium`. |
+| **Markdown Viewer App** | A macOS app for rendering Markdown. |
 
-1. Enter an `http` or `https` URL and press Enter.
-2. Copy, save, or open the converted Markdown from the result view.
+Editor and viewer actions require their corresponding preference. They do not read shell environment variables.
 
-The extension downloads the webpage directly from your computer, extracts its readable content with Mozilla Readability, and converts the resulting HTML with Turndown. It does not send page contents to an AI or third-party conversion service. Typographic single and double quotes are converted to plain ASCII quotes in the resulting Markdown.
+## Choose output names and folders
 
-## Preferences
+The command form lets you choose a filename style for that run or select **Custom File Name**, which reveals a text field. The `.md` extension is optional and repeated extensions are removed. **Save To** overrides the default output folder for the current run only.
 
-- **Default Output Folder**: where generated Markdown files are saved; defaults to Downloads.
-- **Generated File Name Style**: supports lowercase dashes, lowercase underscores, Title Case, and date-prefixed lowercase dashes.
-- **Text Editor Command**: a command to open the Markdown in an editor. Configure this before using the editor actions; for example, `/opt/homebrew/bin/codium`.
-- **Markdown Viewer App**: an app that opens rendered Markdown. Configure this before using the Markdown viewer actions.
+<p align="center">
+  <img width="800" alt="Webpage to Markdown form with per-run output controls" src="assets/webpage_to_markdown_command_populated_form.png" />
+</p>
 
-The "without saving" editor and viewer actions create a temporary Markdown file, not a file in the output folder.
+<p align="center">
+  <img width="800" alt="Output File Name dropdown including Custom File Name" src="assets/webpage_to_markdown_command_file_name_options_menu.png" />
+</p>
 
-The URL must be reachable from your computer. Pages that require a browser sign-in may not work because the extension does not share browser cookies.
+For offline exports, the selected folder receives a new folder named after the Markdown file; that folder contains the Markdown file and, when needed, `assets/`.
+
+## Use the result actions
+
+The regular conversion command opens a Markdown preview in Raycast. Its Action Panel can copy the Markdown, save and reveal the Markdown file, save and open it in a configured text editor or viewer, or open a temporary file without adding a copy to the output folder.
+
+<p align="center">
+  <img width="800" alt="Action Panel for a converted Markdown document" src="assets/webpage_to_markdown_command_output_action_menu.png" />
+</p>
+
+Offline exports save automatically. Their Action Panel includes the same opening and reveal actions for the already-saved document.
+
+<p align="center">
+  <img width="800" alt="Action Panel for an offline Markdown export" src="assets/webpage_to_markdown_offline_command_action_menu.png" />
+</p>
+
+## Develop locally
+
+From this directory:
+
+```sh
+npm install
+npm run dev
+```
+
+Raycast reloads the extension while development mode is running. Before sharing a build, run:
+
+```sh
+npm run lint
+npm run build
+```
+
+The repository root also provides `../dev_install_extension.sh` and `../install_extension.sh` helpers.
+
+## Implementation notes
+
+- The extension fetches directly from the Mac running Raycast; pages that require a browser sign-in may not work.
+- Mozilla Readability extracts article content and Turndown converts it to Markdown.
+- Offline image downloads are limited to 20 MB per image. The `assets` directory is created only after an image successfully downloads.
+- Downloaded images use local relative paths and do not retain online image-link wrappers.

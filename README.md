@@ -1,91 +1,79 @@
 <p align="center">
-  <img width="256" alt="Webpage to Markdown icon" src="webpage-to-markdown-local/assets/webpage-to-markdown-logo.png" />
+  <img width="192" alt="Webpage to Markdown icon" src="webpage-to-markdown-local/assets/webpage-to-markdown-logo.png" />
 </p>
 
 # Webpage to Markdown for Raycast
 
-Convert webpages to clean Markdown directly on your computer. The extension downloads pages from your Mac, extracts readable content, and converts it locally. It does not send page contents to an AI or cloud conversion service.
+Turn a webpage into clean Markdown on your computer. The extension fetches the page from your Mac, extracts readable content, and converts it locally - no AI or cloud conversion service receives the page contents.
 
-The Raycast extension source lives in [`webpage-to-markdown-local/`](./webpage-to-markdown-local/), a Raycast-generated extension directory.
+<p align="center">
+  <img width="800" alt="Raycast search showing the Webpage to Markdown commands" src="webpage-to-markdown-local/assets/extension_top_level_screenshot.png" />
+</p>
 
-## Commands
+## What it does
 
-- **Webpage to Markdown** - paste a URL to preview the converted Markdown in Raycast. From the Action Panel, copy it, save it, or open it in a configured text editor or Markdown viewer.
-- **Webpage to Offline Markdown** - save a self-contained export immediately. The extension downloads article images and changes image paths to local relative files.
+- **Webpage to Markdown** converts a URL to Markdown for previewing, copying, saving, or opening in your preferred apps.
+- **Webpage to Offline Markdown** saves a portable Markdown export and downloads article images for local use.
+- Choose a generated filename style or enter a **Custom File Name**. The `.md` extension is optional and is never duplicated.
+- Choose a destination for each export, or configure a default folder once in Raycast preferences.
 
-Both commands accept an optional output filename and destination folder. The `.md` extension is optional; the extension never adds it twice.
+## Install and run
 
-## Offline export layout
+Install [Raycast](https://www.raycast.com/) and Node.js, then use one of the helpers in this repository:
 
-Offline exports are organized as a single folder so the Markdown and downloaded images can travel together:
+```sh
+# Start in development mode; Raycast reloads source changes automatically.
+./dev_install_extension.sh
+
+# Build and install without development-mode reloading.
+./install_extension.sh
+```
+
+For manual setup, configuration, and development commands, see the [extension documentation](./webpage-to-markdown-local/README.md).
+
+## Convert a webpage
+
+1. Open **Webpage to Markdown** in Raycast and enter an `http` or `https` URL.
+
+<p align="center">
+  <img width="800" alt="Webpage to Markdown URL form" src="webpage-to-markdown-local/assets/webpage_to_markdown_command_blank_form.png" />
+</p>
+
+2. Choose an output filename format, optionally supply a custom filename, and choose a destination when you want one for this run.
+
+3. Review the generated Markdown, then copy it, save it, reveal it in Finder, or open it in a configured text editor or Markdown viewer.
+
+<p align="center">
+  <img width="800" alt="Preview of generated Markdown in Raycast" src="webpage-to-markdown-local/assets/webpage_to_markdown_command_output_preview.png" />
+</p>
+
+## Create an offline export
+
+**Webpage to Offline Markdown** writes the export immediately. It downloads readable article images, changes them to local relative paths, and removes any original online link that wrapped a downloaded image.
+
+<p align="center">
+  <img width="800" alt="Webpage to Offline Markdown form" src="webpage-to-markdown-local/assets/webpage_to_markdown_offline_command_populated_form.png" />
+</p>
+
+Offline exports always get their own folder inside the selected destination, so the Markdown and downloaded images can move together:
 
 ```text
 chosen-destination/
   article-name/
     article-name.md
-    assets/
+    assets/                 # created only when an image is downloaded
       article-name-image-001.jpg
-      article-name-image-002.png
 ```
 
-The selected destination receives the `article-name` folder. The Markdown file itself is not placed directly in the selected destination.
+The Markdown file itself is not placed directly in `chosen-destination/`.
 
-## Output controls
+## Privacy and limits
 
-The command form lets you choose:
+- The target website receives a normal request from your computer.
+- Extraction and HTML-to-Markdown conversion happen locally; browser cookies and sign-in sessions are not shared.
+- Offline mode downloads readable article images, not an entire website. Ordinary webpage links remain ordinary links.
+- Typographic single and double quotes are normalized to plain ASCII quotes in the generated Markdown.
 
-| Control | What it does |
-| --- | --- |
-| **Output File Name** | Sets the filename. Leave it blank to derive a name from the webpage title. |
-| **Output Title Format** | Selects lowercase dashes, lowercase underscores, Title Case, date-prefixed lowercase dashes, or the extension default. It applies only when the filename is blank. |
-| **Save To** | Chooses a destination for this run. Leave it blank to use the configured default output folder. |
+## More detail
 
-## Preferences
-
-Open the extension preferences in Raycast to configure these defaults:
-
-| Preference | Purpose |
-| --- | --- |
-| **Default Output Folder** | Where saved Markdown goes when no destination is selected in the command. Defaults to Downloads. |
-| **Generated File Name Style** | The naming convention used when no per-run format is selected. |
-| **Text Editor Command** | Command used to open generated Markdown. For example: `/opt/homebrew/bin/codium`. |
-| **Markdown Viewer App** | The macOS app used to open rendered Markdown. |
-
-The Action Panel includes options to save first before opening an editor or viewer, or to open a temporary file without creating an output-file copy.
-
-## Privacy and limitations
-
-- The target webpage still receives a normal request from your computer.
-- Page extraction and HTML-to-Markdown conversion happen locally.
-- The extension does not share your browser cookies, so pages that require a browser sign-in may not work.
-- Offline exports download readable article images. They do not mirror an entire website or rewrite ordinary article links.
-- Typographic single and double quotes are converted to plain ASCII quotes in the generated Markdown.
-
-## Run locally
-
-Install Node.js and [Raycast](https://www.raycast.com/) first, then run the following from the Raycast extension directory:
-
-```sh
-cd webpage-to-markdown-local
-npm install
-npm run dev
-```
-
-Raycast imports the extension in development mode and reloads it as source files change. Before publishing or sharing changes, validate it with:
-
-```sh
-npm run lint
-npm run build
-```
-
-## Upstream references
-
-- [Raycast extension development guide](https://developers.raycast.com/basics/getting-started)
-- [Raycast CLI documentation](https://developers.raycast.com/information/developer-tools/cli)
-- [Raycast extension templates](https://developers.raycast.com/information/developer-tools/templates)
-- [Mozilla Readability](https://github.com/mozilla/readability)
-- [Turndown](https://github.com/mixmark-io/turndown)
-
-## Administrative notes
-
-This extension is currently intended for local development and installation. It was co-authored with AI assistance.
+The [extension documentation](./webpage-to-markdown-local/README.md) covers Raycast preferences, per-run output choices, result actions, and local development.
