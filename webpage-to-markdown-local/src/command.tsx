@@ -13,6 +13,7 @@ import {
   Toast,
 } from "@raycast/api";
 import { Readability } from "@mozilla/readability";
+import { runAppleScript } from "@raycast/utils";
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
@@ -26,7 +27,7 @@ const MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 20_000;
 
 type FormValues = {
-  url: string;
+  url?: string;
   outputFileName?: string;
   outputDirectory?: string[];
   outputTitleFormat: FileNameOption;
@@ -41,6 +42,7 @@ type Preferences = {
 
 type FileNameStyle = "kebab-case" | "snake_case" | "title-case" | "dated-kebab-case";
 type FileNameOption = "default" | "custom" | FileNameStyle;
+type ConversionSource = "url" | "safari";
 
 type ExtractedPage = {
   contentHtml: string;
@@ -65,34 +67,47 @@ type AssetOptions = {
   filePrefix: string;
 };
 
-export function WebpageToMarkdownCommand({ offline = false }: { offline?: boolean }) {
+export function WebpageToMarkdownCommand({
+  offline = false,
+  source = "url",
+}: {
+  offline?: boolean;
+  source?: ConversionSource;
+}) {
   const [conversion, setConversion] = useState<Conversion>();
   const [isConverting, setIsConverting] = useState(false);
   const [fileNameOption, setFileNameOption] = useState<FileNameOption>("default");
   const preferences = getPreferenceValues<Preferences>();
+  const isSafariSource = source === "safari";
 
   async function handleSubmit(values: FormValues) {
-    let sourceUrl: URL;
+    let sourceUrl: URL | undefined;
 
-    try {
-      sourceUrl = parseWebUrl(values.url);
-    } catch (error) {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Enter a valid webpage URL",
-        message: errorMessage(error),
-      });
-      return;
+    if (!isSafariSource) {
+      try {
+        sourceUrl = parseWebUrl(values.url ?? "");
+      } catch (error) {
+        await showToast({
+          style: Toast.Style.Failure,
+          title: "Enter a valid webpage URL",
+          message: errorMessage(error),
+        });
+        return;
+      }
     }
 
     setIsConverting(true);
     const toast = await showToast({
       style: Toast.Style.Animated,
-      title: offline ? "Creating offline Markdown" : "Converting webpage locally",
+      title: isSafariSource
+        ? "Reading current Safari page"
+        : offline
+          ? "Creating offline Markdown"
+          : "Converting webpage locally",
     });
 
     try {
-      const extractedPage = await extractWebpage(sourceUrl);
+      const extractedPage = isSafariSource ? await extractCurrentSafariWebpage() : await extractWebpage(sourceUrl!);
       const fileNameStyle = selectedFileNameStyle(values.outputTitleFormat, preferences);
       let result: Conversion;
 
@@ -121,14 +136,20 @@ export function WebpageToMarkdownCommand({ offline = false }: { offline?: boolea
         result.outputDirectory = values.outputDirectory?.[0];
         result.fileNameStyle = fileNameStyle;
         toast.style = Toast.Style.Success;
-        toast.title = "Markdown ready";
-        toast.message = "Nothing was sent to a conversion service.";
+        toast.title = isSafariSource ? "Markdown ready from Safari" : "Markdown ready";
+        toast.message = isSafariSource
+          ? "The active tab was read through your Safari session."
+          : "Nothing was sent to a conversion service.";
       }
 
       setConversion(result);
     } catch (error) {
       toast.style = Toast.Style.Failure;
-      toast.title = offline ? "Could not create offline Markdown" : "Could not convert this webpage";
+      toast.title = isSafariSource
+        ? "Could not read current Safari page"
+        : offline
+          ? "Could not create offline Markdown"
+          : "Could not convert this webpage";
       toast.message = errorMessage(error);
     } finally {
       setIsConverting(false);
@@ -141,6 +162,7 @@ export function WebpageToMarkdownCommand({ offline = false }: { offline?: boolea
         conversion={conversion}
         preferences={preferences}
         onConvertAnother={() => setConversion(undefined)}
+        onConvertAnotherTitle={isSafariSource ? "Convert Current Safari Page" : "Convert Another Webpage"}
       />
     );
   }
@@ -151,7 +173,13 @@ export function WebpageToMarkdownCommand({ offline = false }: { offline?: boolea
       actions={
         <ActionPanel>
           <Action.SubmitForm
-            title={offline ? "Create Offline Markdown" : "Convert to Markdown"}
+            title={
+              isSafariSource
+                ? "Convert Current Safari Page"
+                : offline
+                  ? "Create Offline Markdown"
+                  : "Convert to Markdown"
+            }
             icon={Icon.Document}
             onSubmit={handleSubmit}
           />
@@ -161,18 +189,22 @@ export function WebpageToMarkdownCommand({ offline = false }: { offline?: boolea
     >
       <Form.Description
         text={
-          offline
-            ? "Downloads the page and its article images directly to your computer. Markdown is saved immediately, with local images in an assets folder."
-            : "Downloads the page directly, then extracts and converts its content on this device. The webpage itself still receives a normal request from your computer."
+          isSafariSource
+            ? "Reads the rendered HTML from Safari's current tab, including its signed-in session. Requires Safari to allow JavaScript from Apple Events."
+            : offline
+              ? "Downloads the page and its article images directly to your computer. Markdown is saved immediately, with local images in an assets folder."
+              : "Downloads the page directly, then extracts and converts its content on this device. The webpage itself still receives a normal request from your computer."
         }
       />
-      <Form.TextField
-        id="url"
-        title="Webpage URL"
-        placeholder="https://example.com/article"
-        autoFocus
-        info="The page must be reachable from this computer. Browser sign-in sessions are not shared."
-      />
+      {!isSafariSource && (
+        <Form.TextField
+          id="url"
+          title="Webpage URL"
+          placeholder="https://example.com/article"
+          autoFocus
+          info="The page must be reachable from this computer. Browser sign-in sessions are not shared."
+        />
+      )}
       <Form.Dropdown
         id="outputTitleFormat"
         title="Output File Name"
@@ -215,10 +247,12 @@ function MarkdownDetail({
   conversion,
   preferences,
   onConvertAnother,
+  onConvertAnotherTitle,
 }: {
   conversion: Conversion;
   preferences: Preferences;
   onConvertAnother: () => void;
+  onConvertAnotherTitle: string;
 }) {
   const [savedPath, setSavedPath] = useState(conversion.savedPath);
   const markdown = formatDocument(conversion);
@@ -302,7 +336,7 @@ function MarkdownDetail({
           <Action.CopyToClipboard title="Copy Source URL" content={conversion.sourceUrl} />
           <Action.OpenInBrowser title="Open Original Webpage" url={conversion.sourceUrl} />
           <Action
-            title="Convert Another Webpage"
+            title={onConvertAnotherTitle}
             icon={Icon.Plus}
             onAction={onConvertAnother}
             shortcut={Keyboard.Shortcut.Common.New}
@@ -327,7 +361,69 @@ async function runAction(action: () => Promise<unknown>) {
 }
 
 async function extractWebpage(sourceUrl: URL): Promise<ExtractedPage> {
-  const html = await fetchHtml(sourceUrl);
+  return extractWebpageHtml(await fetchHtml(sourceUrl), sourceUrl);
+}
+
+type SafariPagePayload = {
+  url: unknown;
+  html: unknown;
+};
+
+async function extractCurrentSafariWebpage(): Promise<ExtractedPage> {
+  if (process.platform !== "darwin") {
+    throw new Error("Reading the current Safari tab is only available on macOS.");
+  }
+
+  let output: string;
+  try {
+    output = await runAppleScript(
+      `
+        tell application "Safari"
+          if not (exists front window) then error "Safari does not have an open window."
+          set activeTab to current tab of front window
+          set pageData to do JavaScript "JSON.stringify({url: window.location.href, html: document.documentElement.outerHTML})" in activeTab
+          return pageData
+        end tell
+      `,
+      { timeout: 30_000 },
+    );
+  } catch (error) {
+    const message = errorMessage(error);
+    if (/Apple Events|not authorized|not permitted|-1743/i.test(message)) {
+      throw new Error(
+        "Safari did not permit access. In Safari Settings > Developer, enable Allow JavaScript from Apple Events, then allow Safari automation when macOS asks.",
+      );
+    }
+
+    throw new Error(`Could not read the active Safari tab: ${message}`);
+  }
+
+  let page: SafariPagePayload;
+  try {
+    page = JSON.parse(output) as SafariPagePayload;
+  } catch {
+    throw new Error("Safari returned an unreadable webpage response.");
+  }
+
+  if (typeof page.url !== "string" || typeof page.html !== "string") {
+    throw new Error("Safari did not return a webpage URL and HTML document.");
+  }
+
+  let sourceUrl: URL;
+  try {
+    sourceUrl = parseWebUrl(page.url);
+  } catch {
+    throw new Error("The current Safari tab must be an http:// or https:// webpage.");
+  }
+
+  if (new TextEncoder().encode(page.html).byteLength > MAX_PAGE_SIZE_BYTES) {
+    throw new Error("The webpage is larger than the 20 MB conversion limit.");
+  }
+
+  return extractWebpageHtml(page.html, sourceUrl);
+}
+
+function extractWebpageHtml(html: string, sourceUrl: URL): ExtractedPage {
   const { document } = parseHTML(html);
   const article = new Readability(document).parse();
   const contentHtml = article?.content?.trim() || document.body.innerHTML;

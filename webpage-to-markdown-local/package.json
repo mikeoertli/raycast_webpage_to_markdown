@@ -27,6 +27,13 @@
       "subtitle": "Save Markdown and article images locally",
       "description": "Converts a webpage to Markdown where image references point to image assets which have been downloaded into an assets folder. Everything is saved locally.",
       "mode": "view"
+    },
+    {
+      "name": "current-safari-page-to-markdown",
+      "title": "Current Safari Page to Markdown",
+      "subtitle": "Convert the active Safari tab",
+      "description": "Reads the rendered HTML from Safari's active tab, including its signed-in session, then converts it to Markdown locally.",
+      "mode": "view"
     }
   ],
   "preferences": [

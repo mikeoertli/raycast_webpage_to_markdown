@@ -14,6 +14,7 @@ Turn a webpage into clean Markdown on your computer. The extension fetches the p
 
 - **Webpage to Markdown** converts a URL to Markdown for previewing, copying, saving, or opening in your preferred apps.
 - **Webpage to Offline Markdown** saves a portable Markdown export and downloads article images for local use.
+- **Current Safari Page to Markdown** reads the active Safari tab's rendered page, including a signed-in session, and converts it locally.
 - Choose a generated filename style or enter a **Custom File Name**. The `.md` extension is optional and is never duplicated.
 - Choose a destination for each export, or configure a default folder once in Raycast preferences.
 
@@ -67,10 +68,17 @@ chosen-destination/
 
 The Markdown file itself is not placed directly in `chosen-destination/`.
 
+## Convert a signed-in Safari page
+
+Use **Current Safari Page to Markdown** for a page you have already opened and signed in to in Safari. It reads the active tab's rendered HTML instead of requesting the URL again, and it does not copy or store Safari cookies.
+
+Before first use, enable **Safari Settings > Developer > Allow JavaScript from Apple Events**. macOS will also ask permission to automate Safari. The command is available on macOS only.
+
 ## Privacy and limits
 
 - The target website receives a normal request from your computer.
-- Extraction and HTML-to-Markdown conversion happen locally; browser cookies and sign-in sessions are not shared.
+- Extraction and HTML-to-Markdown conversion happen locally. The URL and offline commands do not share browser cookies or sign-in sessions.
+- The Safari command uses the signed-in Safari tab only when you run it and permission has been granted.
 - Offline mode downloads readable article images, not an entire website. Ordinary webpage links remain ordinary links.
 - Typographic single and double quotes are normalized to plain ASCII quotes in the generated Markdown.
 
